@@ -23,6 +23,50 @@ window.onload = function(){
         .attr("y", 50) // Position from the top, vertical axis
         .style("fill", "#FFFFFF");
 
-    console.log(innerRect);
+    var cityPop = [
+        { 
+            city: 'Madison',
+            population: 233209
+        },
+        {
+            city: 'Milwaukee',
+            population: 594833
+        },
+        {
+            city: 'Green Bay',
+            population: 104057
+        },
+        {
+            city: 'Superior',
+            population: 27244
+        }
+    ];
 
+    var cityCircles = container.selectAll(".circles")
+        .data(cityPop) // Feeds the cityPop array
+        .enter() // Joins the cityPop array
+        .append("circle")
+        .attr("class", "cityCircles")
+
+        // City name
+        .attr("id", function(d){
+            return d.city;
+        })
+
+        // City circle radius
+        .attr("r", function(d){
+            var area = d.population * 0.01;
+            console.log(d.city + ": " + d.population);
+            return Math.sqrt(area/Math.PI);
+        })
+
+        // Circle X coordinate
+        .attr("cx", function(d, i){
+            return 90 + (i * 180);
+        })
+
+        // Circle y coordinate
+        .attr("cy", function(d){
+            return 450 - (d.population * 0.0005);
+        });
 };
