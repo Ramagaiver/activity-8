@@ -23,7 +23,6 @@ window.onload = function(){
         .attr("y", 50) // Position from the top, vertical axis
         .style("fill", "#FFFFFF");
 
-    // Preliminary city data
     var cityPop = [
         { 
             city: 'Madison',
