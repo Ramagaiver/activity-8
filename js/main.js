@@ -45,6 +45,24 @@ function callback(data, map, path){
         asia = data[1],    
         thailand = data[2];
 
+    // Creates graticules every 5 degrees long/lat
+    var graticule = d3.geoGraticule()
+        .step([5, 5]);
+
+    //create graticule background
+    var gratBackground = map.append("path")
+        .datum(graticule.outline()) //bind graticule background
+        .attr("class", "gratBackground") //assign class for styling
+        .attr("d", path) //project graticule
+
+    // Renders and creates graticule elements
+    var gratLines = map.selectAll(".gratLines")
+        .data(graticule.lines()) // Binds a graticule to each element
+        .enter() // Creates an element for each datum
+        .append("path")
+        .attr("class", "gratLines")
+        .attr("d", path); // Applies projection to graticules
+
     // TopoJSON -> GeoJSON
     var asianCountries = topojson.feature(asia, asia.objects.Countries),
         thaiProvinces = topojson.feature(thailand, thailand.objects['Provinces2']).features;
@@ -55,7 +73,7 @@ function callback(data, map, path){
         .attr("class", "countries")
         .attr("d", path);
 
-    // Draws Thai provinces (Provinces2.topojson)
+    // Renders Thai provinces (Provinces2.topojson)
     var provinces = map.selectAll(".provinces")
         .data(thaiProvinces)
         .enter()
