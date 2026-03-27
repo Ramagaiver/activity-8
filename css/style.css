@@ -1,5 +1,9 @@
-/* This is necessary to prevent scrolling from being enabled */
+/* This is necessary to prevent scrolling from being enabled and to fill the web page properly*/
 html, body {
+    margin: 0;
+    height: 100vh;
+    width: 100vw;
+    box-sizing: border-box;
     overflow: hidden;
 }
 
@@ -8,9 +12,10 @@ html, body {
     width: 100%;
     height: 100%;
     display: block;
+    box-sizing: border-box;
 
-    border: medium solid #999;
-
+    /* Partial fix to the graticule lines and fill not rendering in the top-right */
+    background-color: #D5E3FF;
 }
 
 /* MAP STYLES */
@@ -22,6 +27,16 @@ html, body {
     stroke-width: 1px;
 }
 
+/* Province styles */
+.provinces {
+    opacity: 1;
+    fill: #cccccc33;
+    stroke: #CCC;
+    stroke-width: 1px;
+}
+
+/* Graticule symbols */
+
 .gratLines {
     fill: none;
     stroke: #999;
@@ -29,5 +44,7 @@ html, body {
 }
 
 .gratBackground {
-    fill: #0055ff;
+    fill: #D5E3FF;
 }
+
+/* --------------- */

@@ -47,20 +47,24 @@ function callback(data, map, path){
 
     // Creates graticules every 5 degrees long/lat
     var graticule = d3.geoGraticule()
+
+        // I tried figuring out why the graticule and its fill keeps cutting off in the top-right, but at this time I haven't found a solution
+        // besides setting the map element's background to the same color as the graticule fill
+        .extent([[80, -5], [150, 500]])
         .step([5, 5]);
 
     //create graticule background
     var gratBackground = map.append("path")
-        .datum(graticule.outline()) //bind graticule background
-        .attr("class", "gratBackground") //assign class for styling
-        .attr("d", path) //project graticule
+        .datum(graticule.outline()) // Binds the graticule background
+        .attr("class", "gratBackground") // Class for styling
+        .attr("d", path)
 
     // Renders and creates graticule elements
     var gratLines = map.selectAll(".gratLines")
         .data(graticule.lines()) // Binds a graticule to each element
         .enter() // Creates an element for each datum
         .append("path")
-        .attr("class", "gratLines")
+        .attr("class", "gratLines") // Class for styling
         .attr("d", path); // Applies projection to graticules
 
     // TopoJSON -> GeoJSON
