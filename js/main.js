@@ -8,9 +8,8 @@
     var expressed = attrArray[3];
 
     function setMap(){
-
         // This sets initial width and height, although its probably obsolete due to CSS styles
-        var width = 900,
+        var width = window.innerWidth * 0.5,
             height = 900;
 
         // Creates SVG containers for the map
@@ -70,13 +69,75 @@
 
             // Add enumeration units to the map
             setEnumerationUnits(thaiProvinces, map, path, colorScale);
+
+            setChart(csvData, colorScale)
         };
+    }
+
+    function setChart(csvData, colorScale){
+        // Chart dimensions
+        var chartWidth = 700,
+            chartHeight = 460;
+
+        // Chart html element
+        var chart = d3.select("body")
+            .append("svg")
+            .attr("width", chartWidth)
+            .attr("height", chartHeight)
+            .attr("class", "chart");
+
+        // Handles the scale for bars such that they're proportional to chartHeight
+        var yScale = d3.scaleLinear()
+            .range([chartHeight, 0])
+            .domain([0, 100]);
+
+        // Assigns bars for each province
+        var bars = chart.selectAll(".bars")
+            .data(csvData)
+            .enter()
+            .append("rect")
+            .sort(function(a, b){
+                return a[expressed]-b[expressed]
+            })
+            .attr("class", function(d){
+                return "bars " + d.Province;
+            })
+            .attr("width", chartWidth / csvData.length - 1)
+            .attr("x", function(d, i){
+                return i * (chartWidth / csvData.length);
+            })
+            .attr("height", function(d){
+                return chartHeight - yScale(parseFloat(d[expressed]));
+            })
+            .attr("y", function(d){
+                return yScale(parseFloat(d[expressed]));
+            })
+            .style("fill", function(d){
+                return colorScale(d[expressed]);
+            });
+
+        // Vertical y-axis generator
+        var yAxis = d3.axisRight()
+            .scale(yScale);
+
+        // Places the y-axis on the right-sided edge of the chart
+        var axis = chart.append("g")
+            .attr("class", "axis")
+            .attr("transform", "translate(" + chartWidth + ", 0)")
+            .call(yAxis);
+
+        // Chart title
+        var chartTitle = chart.append("text")
+            .attr("x", 20)
+            .attr("y", 40)
+            .attr("class", "chartTitle")
+            .text(expressed + " by Province");
     }
 
     function makeColorScale(data){
         // Color palette
         var colorClasses = [
-            "#fff5f0",
+            "#ffe7db",
             "#fedbcb",
             "#fcaf94",
             "#fc8161",
@@ -110,6 +171,7 @@
 
             // I tried figuring out why the graticule and its fill keeps cutting off in the top-right, but at this time I haven't found a solution
             // besides setting the map element's background to the same color as the graticule fill
+            // TODO: Fix this
             .extent([[80, -5], [150, 500]])
             .step([5, 5]);
 

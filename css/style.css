@@ -15,8 +15,57 @@ html, body {
     box-sizing: border-box;
 
     /* Partial fix to the graticule lines and fill not rendering in the top-right */
+    /* TODO: Figure this out */
     background-color: #D5E3FF;
 }
+
+/* CHART STYLES */
+
+.chart {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+
+    /* Z-index ensures chart is always above map */
+    z-index: 10;
+
+    background-color: rgb(255, 255, 255);
+    border: 1px solid #999;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+
+    /* Overflow allows the y-axis text to be shown properly */
+    overflow: visible;
+}
+
+/* Chart title symbol */
+.chartTitle {
+    font-family: sans-serif;
+    font-size: 1.5em;
+    font-weight: bold;
+}
+
+/* I can't decide how I want to stylize the y-axis labels */
+/* On the one hand, I think that the line paths are necessary, */
+/* but I can't seem to figure out how to properly align them */
+/* since they have a very tiny, yet somewhat annoyingly noticeable offset */
+/* I can't figure out. For the time being, this is a suitable compromise. */
+/* TODO: Figure this out */
+.axis path,
+.axis line {
+    fill: none;
+    stroke: #ffffff00;
+    shape-rendering: crispEdges;
+}
+
+/* Axis text symbols */
+.axis text {
+    font-family: sans-serif;
+    font-weight: bold;
+    font-size: 14px;
+    fill: #000000;
+}
+
+/* --------------- */
 
 /* MAP STYLES */
 
