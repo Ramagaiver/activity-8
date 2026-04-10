@@ -47,4 +47,13 @@ html, body {
     fill: #D5E3FF;
 }
 
+/* Chloropleth symbols */
+
+.provinces {
+    stroke: #000;
+    stroke-opacity: 0.7;
+    stroke-width: 0.5px;
+    stroke-linecap: round;
+}
+
 /* --------------- */
