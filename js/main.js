@@ -394,8 +394,8 @@ function getRandomIntInclusive(min, max) {
         }
     }
 
-    function introAbstract(){
+    // function introAbstract(){
 
-        const abstract = document.getElementById("abstract");
-    }
+    //     const abstract = document.getElementById("abstract");
+    // }
 })();
