@@ -5,16 +5,32 @@
     var activeRegion = null;
 
     // Variables for data join
-    var attrArray = ["Formal Workforce", "Informal Workforce", "Total Workforce", "Informal Workforce % of Total Workforce", "Informal Workforce > Formal Workforce"];
+    var attrArray = ["Formal Workforce", "Informal Workforce", "Total Workforce", "Informal Workforce % of Total Workforce"];
     
     // Starter variable for the percentage attribute
     var expressed = attrArray[3];
 
-function getRandomIntInclusive(min, max) {
-  min = Math.ceil(min);
-  max = Math.floor(max);
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
+    // Chart dimensions
+    var chartWidth = 700,
+        chartHeight = 460;
+
+    // Handles the scale for bars such that they're proportional to chartHeight
+    var yScale = d3.scaleLinear()
+        .range([chartHeight, 0])
+        .domain([0, 100]);
+
+    // Default region color pallette
+    var regionColors = {
+        "Northern": "#3ce67b",
+        "Northeastern": "#f8a20c",
+        "Central": "#ffd0d0",
+        "Eastern": "#3ce67b", 
+        "Western": "#f8a20c",
+        "Southern": "#ffd0d0"
+    };
+
+    //begin script when window loads
+    window.onload = setMap();
 
     function setMap(){
         // This sets initial width and height, although its probably obsolete due to CSS styles
@@ -79,7 +95,7 @@ function getRandomIntInclusive(min, max) {
             var colorScale = makeColorScale(csvData);
 
             // Add enumeration units to the map
-            setEnumerationUnits(thaiProvinces, map, path, colorScale);
+            setEnumerationUnits(thaiProvinces, map, path, csvData);
 
             // setChart(csvData, colorScale)
             createDropdown(csvData, thaiProvinces, map);
@@ -87,9 +103,10 @@ function getRandomIntInclusive(min, max) {
     }
 
     function setChart(csvData, colorScale){
-        // Chart dimensions
-        var chartWidth = 700,
-            chartHeight = 460;
+        // Ensures all data is sorted from the beginning
+        csvData.sort(function(a, b){
+            return a[expressed] - b[expressed];
+        });
 
         // Chart html element
         var chart = d3.select("body")
@@ -98,19 +115,22 @@ function getRandomIntInclusive(min, max) {
             .attr("height", chartHeight)
             .attr("class", "chart");
 
-        // Handles the scale for bars such that they're proportional to chartHeight
-        var yScale = d3.scaleLinear()
-            .range([chartHeight, 0])
-            .domain([0, 100]);
+        // Updates yScale domain based on the attribute
+        if (expressed === "Informal Workforce % of Total Workforce"){
+            yScale.domain([0, 100]);
+        } else {
+            // Finds the maximum value of the currently selected region
+            var max = d3.max(csvData, function(d){
+                return parseFloat(String(d[expressed]).replace(/,/g, ""));
+            });
+            yScale.domain([0, max * 1.1]); // 10% padding so highest bar doesn't touch the top of the chart
+        }
 
         // Assigns bars for each province
         var bars = chart.selectAll(".bars")
             .data(csvData)
             .enter()
             .append("rect")
-            .sort(function(a, b){
-                return a[expressed]-b[expressed]
-            })
             .attr("class", function(d){
                 return "bars " + d.Province;
             })
@@ -128,6 +148,9 @@ function getRandomIntInclusive(min, max) {
                 return colorScale(d[expressed]);
             });
 
+        // Calls updateChart 
+        updateChart(bars, csvData.length, colorScale);
+
         // Vertical y-axis generator
         var yAxis = d3.axisRight()
             .scale(yScale);
@@ -137,35 +160,110 @@ function getRandomIntInclusive(min, max) {
             .attr("class", "axis")
             .attr("transform", "translate(" + chartWidth + ", 0)")
             .call(yAxis);
-
-        // Chart title
-        var chartTitle = chart.append("text")
-            .attr("x", 20)
-            .attr("y", 40)
-            .attr("class", "chartTitle")
-            .text(expressed + " by Province");
     }
 
-    // function createDropdown(){
-    //     //add select element
-    //     var dropdown = d3.select("body")
-    //         .append("select")
-    //         .attr("class", "dropdown");
+    function createDropdown(csvData){
+        // Dropdown element
+        var dropdown = d3.select("body")
+            .append("select")
+            .attr("class", "dropdown")
+            .style("display", "none") // Hidden until region select
+            .on("change", function(){
+                changeAttribute(this.value, csvData)
+            });
 
-    //     //add initial option
-    //     var titleOption = dropdown.append("option")
-    //         .attr("class", "titleOption")
-    //         .attr("disabled", "true")
-    //         .text("Select Attribute");
+        // Attribute names/options, also default option
+        var attrOptions = dropdown.selectAll("attrOptions")
+            .data(attrArray)
+            .enter()
+            .append("option")
+            .attr("value", function(d){ return d })
+            .text(function(d){ return d })
+            .property("selected", function(d){ return d === expressed; });
+    };
 
-    //     //add attribute name options
-    //     var attrOptions = dropdown.selectAll("attrOptions")
-    //         .data(attrArray)
-    //         .enter()
-    //         .append("option")
-    //         .attr("value", function(d){ return d })
-    //         .text(function(d){ return d });
-    // };
+    function updateChart(bars, n, colorScale){
+        // Repositions, sizes and colors the bars
+        bars.attr("x", function(d, i){
+            return i * (chartWidth / n);
+        })
+        .attr("height", function(d){
+            return chartHeight - yScale(parseFloat(d[expressed]));
+        })
+        .attr("y", function(d){
+            return yScale(parseFloat(d[expressed]));
+        })
+        .style("fill", function(d){
+            var value = d[expressed];
+            if(value) {
+                return colorScale(value);
+            } else {
+                return "#ccc";
+            }
+        });
+
+        // Updates the chart title dynamically
+        d3.select(".chartTitle")
+            .text(expressed + " by Province");
+}
+
+    //Example 1.4 line 14...dropdown change event handler
+    function changeAttribute(attribute, csvData){
+        // Changes the expressed attribute
+        expressed = attribute;
+
+        // Recreates the color scale
+        var colorScale = makeColorScale(csvData);
+
+        // Recolors enumeration units
+        var provinces = d3.selectAll(".provinces")
+            .style("fill", function(d){ 
+                if (!activeRegion){
+                    var region = d.properties.region;
+                    return regionColors[region] ? regionColors[region] : "#ccc";
+                } 
+                
+                if (activeRegion && d.properties.region !==activeRegion){
+                    return "#ccc";
+                }
+
+                var value = d.properties[expressed];
+                if (value !== undefined){
+                    return colorScale(value);
+                } else{
+                    return "#ccc";
+                }
+            });
+
+        // Sort, resize, and recolor bars if the chart exists
+        var bars = d3.selectAll(".bars");
+
+        // Check if bars exist
+        if (!bars.empty()){
+            // Returns the newly sorted chart
+            bars = bars.sort(function(a, b){
+                return a[expressed] - b[expressed];
+            });
+
+            // Updates yScale domain based on the attribute
+            var currentData = bars.data();
+            if (expressed === "Informal Workforce % of Total Workforce") {
+                yScale.domain([0, 100]);
+            } else {
+                var max = d3.max(currentData, function(d){
+                    return parseFloat(String(d[expressed]).replace(/,/g, ""));
+                });
+                yScale.domain([0, max * 1.1]);
+            }
+
+            // Visually updates the yaxis to match the new scale
+            d3.select(".axis").transition().duration(300).call(d3.axisRight(yScale));
+
+            // Passes the length of the chart's current data
+            var n = bars.data().length;
+            updateChart(bars, n, colorScale)
+        }
+    };
 
     function makeColorScale(data){
         // Color palette
@@ -237,17 +335,9 @@ function getRandomIntInclusive(min, max) {
 
                 // Whenever primary attributes match, transfer the csv attributes to the geojson
                 if (geojsonKey == csvKey){
-
-                    // Activity 10 utilizes the parseFloat function. However, since my dataset includes booleans,
-                    // an additional conditional check is necessary before parsing all transfered attributes.
-                    // Additionally, the presence of commas requires the use of the replace() method.
                     attrArray.forEach(function(attr){
-                        var val = csvRegion[attr];
-
-                        if (attr !== "Informal Workforce > Formal Workforce"){
-                            // Parses all non-boolean values
-                            val = parseFloat(csvRegion[attr].replace(/,/g, ""));
-                        }
+                        // Clears out commas from the csv formatting
+                        var val = parseFloat(String(csvRegion[attr]).replace(/,/g, ""));
 
                         // Assigns the attribute to the geojson
                         geojsonProps[attr] = val;
@@ -260,17 +350,7 @@ function getRandomIntInclusive(min, max) {
         return thaiProvinces
     }
 
-    function setEnumerationUnits(thaiProvinces, map, path, colorScale){
-        
-        // Default region color pallette
-        var regionColors = {
-            "Northern": "#3ce67b",
-            "Northeastern": "#f8a20c",
-            "Central": "#ffd0d0",
-            "Eastern": "#3ce67b", 
-            "Western": "#f8a20c",
-            "Southern": "#ffd0d0"
-        };
+    function setEnumerationUnits(thaiProvinces, map, path, csvData){
 
         // Render Thai provinces and apply default region colors
         var provinces = map.selectAll(".provinces")
@@ -311,10 +391,16 @@ function getRandomIntInclusive(min, max) {
 
                     // This deletes the currently loaded chart
                     d3.select(".chart").remove();
+
+                    // Hides the dropdown
+                    d3.select(".dropdown").style("display", "none");
                 } 
                 // IF: User clicks on a new region; color provinces
                 else {
                     activeRegion = clickedRegion; // Set new active state
+
+                    // Applies the colorScale based on the selected attribute
+                    var colorScale = makeColorScale(csvData);
 
                     map.selectAll(".provinces")
                         .transition()
@@ -342,7 +428,8 @@ function getRandomIntInclusive(min, max) {
                         .filter(function(props) {return props.region === activeRegion;})
 
                         d3.select(".chart").remove();
-                        setChart(regionData, colorScale)
+                        setChart(regionData, colorScale);
+                        d3.select(".dropdown").style("display", "block");
                 }
             });
     }
@@ -384,7 +471,6 @@ function getRandomIntInclusive(min, max) {
             var translateY = (height / 2) - scale * ((height / 2) + cy);
 
             // Zoom in
-
             console.log(translateX, translateY)
 
             map.transition()
