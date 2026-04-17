@@ -1,6 +1,4 @@
 (function(){
-    window.onload = setMap;
-
     // Variable for the currently selected region
     var activeRegion = null;
 
@@ -17,7 +15,7 @@
     // Handles the scale for bars such that they're proportional to chartHeight
     var yScale = d3.scaleLinear()
         .range([chartHeight, 0])
-        .domain([0, 100]);
+        .domain([0, 100])
 
     // Default region color pallette
     var regionColors = {
@@ -29,8 +27,8 @@
         "Southern": "#ffd0d0"
     };
 
-    //begin script when window loads
-    window.onload = setMap();
+    // Begin script when window loads
+    window.onload = setMap;
 
     function setMap(){
         // This sets initial width and height, although its probably obsolete due to CSS styles
@@ -99,6 +97,9 @@
 
             // setChart(csvData, colorScale)
             createDropdown(csvData, thaiProvinces, map);
+
+            // Sets up the map interaction guide
+            introTutorial();
         };
     }
 
@@ -113,7 +114,14 @@
             .append("svg")
             .attr("width", chartWidth)
             .attr("height", chartHeight)
-            .attr("class", "chart");
+            .attr("class", "chart")
+            .style("opacity", 0);
+
+        // Chart fade transition
+        chart.transition()
+            .delay(300)
+            .duration(750)
+            .style("opacity", 1);
 
         // Updates yScale domain based on the attribute
         if (expressed === "Informal Workforce % of Total Workforce"){
@@ -161,7 +169,7 @@
         // Calls updateChart 
         updateChart(bars, csvData.length, colorScale);
 
-        // Vertical y-axis generator
+        // Vertical y-axis
         var yAxis = d3.axisRight()
             .scale(yScale);
 
@@ -180,7 +188,8 @@
             .style("display", "none") // Hidden until region select
             .on("change", function(){
                 changeAttribute(this.value, csvData)
-            });
+            })
+            .style("opacity", "0");
 
         // Attribute names/options, also default option
         var attrOptions = dropdown.selectAll("attrOptions")
@@ -217,7 +226,7 @@
             .text(expressed + " by Province");
 }
 
-    //Example 1.4 line 14...dropdown change event handler
+    // Dropdown event handler
     function changeAttribute(attribute, csvData){
         // Changes the expressed attribute
         expressed = attribute;
@@ -306,10 +315,6 @@
     function setGraticule(map, path){
         // Creates graticules every 5 degrees long/lat
         var graticule = d3.geoGraticule()
-
-            // I tried figuring out why the graticule and its fill keeps cutting off in the top-right, but at this time I haven't found a solution
-            // besides setting the map element's background to the same color as the graticule fill
-            // TODO: Fix this
             .extent([[80, -5], [150, 500]])
             .step([5, 5]);
 
@@ -407,11 +412,27 @@
 
                     zoomMap(activeRegion, map);
 
-                    // This deletes the currently loaded chart
-                    d3.select(".chart").remove();
+                    // Fade in abstract
+                    d3.select(".abstract")
+                        .transition()
+                        .duration(1000)
+                        .style("opacity", 1);
 
-                    // Hides the dropdown
-                    d3.select(".dropdown").style("display", "none");
+                    // Fade in & delete chart
+                    d3.select(".chart")
+                        .transition()
+                        .duration(300)
+                        .style("opacity", 0)
+                        .remove();
+
+                    // Fade in & delete dropdown
+                    d3.select(".dropdown")
+                        .transition()
+                        .duration(300)
+                        .style("opacity", 0)
+                        .on("end", function() {
+                            d3.select(this).style("display", "none");
+                        });
 
                     // Hides dynamic label
                     d3.select(".infolabel").remove();
@@ -448,9 +469,30 @@
                         .map(function(province) {return province.properties;})
                         .filter(function(props) {return props.region === activeRegion;})
 
-                        d3.select(".chart").remove();
+                        // Fade out abstract
+                        d3.select(".abstract")
+                            .transition()
+                            .duration(750)
+                            .style("opacity", 0)
+
+                        // Chart fade out transition
+                        d3.select(".chart")
+                            .transition()
+                            .duration(300)
+                            .style("opacity", 0)
+                            .remove();
+
                         setChart(regionData, colorScale);
-                        d3.select(".dropdown").style("display", "block");
+                        
+                        // Dropdown fade out transition
+                        d3.select(".dropdown")
+                            .style("display", "block")
+                            .transition()
+                            .duration(300)
+                            .style("opacity", 0)
+                            .transition()
+                            .duration(750)
+                            .style("opacity", 1);
                 }
             });
 
@@ -590,7 +632,6 @@
         var labelWidth = label.node().getBoundingClientRect().width;
 
         // Use coordinates of mousemove event to set label coordinates
-        // We use the modern 'event' parameter passed directly from D3
         var x1 = event.clientX + 10,
             y1 = event.clientY - 75,
             x2 = event.clientX - labelWidth - 10,
@@ -606,8 +647,13 @@
              .style("top", y + "px");
     }
 
-    // function introAbstract(){
-
-    //     const abstract = document.getElementById("abstract");
-    // }
+    function introTutorial(){
+        d3.select(".tutorial").on("click", function() {
+            d3.select(this)
+                .transition()
+                .duration(500)
+                .style("opacity", 0)
+                .remove();
+        });
+    }
 })();

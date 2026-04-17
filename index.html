@@ -3,15 +3,31 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width">
-        <title>Activity 8, 9 & 10</title>
-        <meta author="Chanodom Tannarat">
+        <title>Thai Workforce Informality by Province, 2024</title>
 
         <link rel="stylesheet" href="css/style.css">
     </head>
 
     <body>
-        <!-- <div class="abstract">The Thai Ministry of Labor defines informal workers as those operating within the "informal economy" without employee status under the Labor Protection Act. In most cases, Thai social security laws extend only to formal workers, and the limited legal protections available to informal workers are rarely enforced. Consequently, informal workers are deprived of essential social security benefits, including workers' compensation, unemployment and retirement insurance, and coverage for work-related accidents, injuries and illnesses, as well as access to information regarding their legal rights.</div> -->
 
+        <!-- Div handling the brief tutorial element -->
+        <div class="tutorial">
+            <img src="data/tutorial.gif" alt="interaction guide">
+
+            <br>Click on any region to view data, click again to exit.
+
+            <br><br><br>Click anywhere to continue.
+        </div>
+
+        <!-- Div holding all explanatory information & relevant citation -->
+        <div class="abstract">
+            <span style="font-size:20px;">Thai Workforce Informality by Province, 2024</span>
+            <br><br>The Thai Ministry of Labor defines informal workers as those operating within the "informal economy" without employee status under the Labor Protection Act. In most cases, Thai so- cial security laws extend only to formal workers, and the limited legal protections available to informal workers are rarely enforced. Consequently, informal workers are deprived of essential social security benefits, including workers' compensation, unemployment and retirement insurance, and coverage for work-related accidents, injuries and illnesses, as well as access to information regarding their legal rights.
+            <br><br><span style="font-size: 10px;">Kongtip et al. <a href="https://doi.org/10.1177/104829111558603">"Informal Workers in Thailand: Occupational Health and Social Security Disparities."</a><i> New Solutions</i>, 2015.
+        </div>
+        
+        <!-- Data source citation -->
+        <div class="data-source"><a href="https://www.nso.go.th/nsoweb/nso/statistics_and_indicators">National Statistics Office, Ministry of Digital Economy and Society (2025, 3 March).<br><i>Percentage of the Informal Employment by Sex and Region: 2012 - 2024.</i></a></div>
 
         <script src="lib/topojson.js"></script>
         <script src="lib/d3.v7.js"></script>

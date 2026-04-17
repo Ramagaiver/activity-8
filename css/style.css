@@ -51,7 +51,12 @@ html, body {
 
     width: 500px;
 }
+/* Dropdown options */
+option {
+    font-weight: normal;
+}
 
+/* Chart axis ticks/notches */
 .axis path,
 .axis line {
     fill: none;
@@ -61,6 +66,10 @@ html, body {
 
 /* Axis text symbols */
 .axis text {
+    stroke: white;
+    stroke-width: 2px;
+    stroke-linejoin: round;
+    paint-order: stroke;
     font-family: sans-serif;
     font-weight: bold;
     font-size: 14px;
@@ -87,7 +96,6 @@ html, body {
 }
 
 /* Graticule symbols */
-
 .gratLines {
     fill: none;
     stroke: #999;
@@ -109,25 +117,7 @@ html, body {
 
 /* --------------- */
 
-.abstract {
-    text-align: center;
-    background-color: rgb(255, 255, 255);
-    border: 1px solid #999;
-    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
-
-    font-family: Arial, Helvetica, sans-serif;
-    font-weight: bold;
-
-    width: 695px;
-    padding: 3px;
-    position: absolute;
-    left: 20px;
-    top: 20px;
-}
-
-option {
-    font-weight: normal;
-}
+/* DYNAMIC LABEL STYLES */
 
 .infolabel {
     position: absolute;
@@ -147,3 +137,76 @@ option {
     display: inline-block;
     line-height: 1em;
 }
+
+/* --------------- */
+
+/* NARRATIVE RELATED STYLES */
+
+/* Data source citation */
+.data-source {
+    position: absolute;
+    right: 10px;
+    bottom: 20px;
+
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: bold;
+    font-size: 12px;
+    color: #333;
+
+    border: 1px solid #999;
+    box-shadow: 2px 2px 4px #999;
+    background-color: rgb(255, 255, 255);
+    padding: 3px;
+}
+
+/* Handles styles for the narration and title */
+.abstract {
+    background-color: rgb(255, 255, 255);
+    border: 1px solid #999;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: bold;
+    color: #333;
+
+    width: 695px;
+    padding: 3px;
+    position: absolute;
+    left: 20px;
+    bottom: 20px;
+}
+
+/* Tutorial styles */
+.tutorial {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+
+    z-index: 1000;
+
+    /* Flexbos for centering */
+    display: flex;
+    flex-direction: column; /* Keeps text and gif stacked vertically */
+    justify-content: center;
+    align-items: center;
+
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: bold;
+    color: #333;
+
+    background-color: rgba(0, 0, 0, 0.85); 
+    color: white;
+    text-align: center;
+    padding: 40px;
+    font-size: 20px;
+}
+
+/* Gif formatting */
+.tutorial img {
+    margin-bottom: 20px;
+    max-width: 1000px;
+}
+
+/* --------------- */
