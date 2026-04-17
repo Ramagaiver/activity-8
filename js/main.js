@@ -132,8 +132,8 @@
             .enter()
             .append("rect")
             .attr("class", function(d){
-                return "bars " + d.Province;
-            })
+                var regionName = d.Province || d.name;
+                return "bars " + regionName.replace(/ /g, "_");            })
             .attr("width", chartWidth / csvData.length - 1)
             .attr("x", function(d, i){
                 return i * (chartWidth / csvData.length);
@@ -146,7 +146,17 @@
             })
             .style("fill", function(d){
                 return colorScale(d[expressed]);
-            });
+            })
+            .on("mouseover", function(event, d){
+                highlight(d);
+            })
+            .on("mouseout", function(event, d){
+                dehighlight(d);
+            })
+            .on("mousemove", moveLabel);
+
+        var desc = bars.append("desc")
+            .text('{"stroke": "none", "stroke-width": "0px"}');
 
         // Calls updateChart 
         updateChart(bars, csvData.length, colorScale);
@@ -268,7 +278,6 @@
     function makeColorScale(data){
         // Color palette
         var colorClasses = [
-            "#ffe7db",
             "#fedbcb",
             "#fcaf94",
             "#fc8161",
@@ -283,8 +292,6 @@
             .range(colorClasses)
 
         // Builds an array for all the values of the expressed attribute
-        // This should be remade into its own function eventually when all attributes
-        // are accounted for
         var domainArray = [];
         for (var i=0; i<data.length; i++){
             var val = parseFloat((data[i][expressed]).replace(/,/g, ""));
@@ -358,7 +365,7 @@
             .enter()
             .append("path")
             .attr("class", function(d){
-                return "provinces " + d.properties.name; 
+                return "provinces " + d.properties.name.replace(/ /g, "_");
             })
             .attr("d", path)
             // Set initial color based on the region palette
@@ -370,6 +377,14 @@
             .style("stroke-width", "0.5px")
             .style("cursor", "pointer") // Change mouse to pointer to show it's clickable
             
+            .on("mouseover", function(event, d){
+                highlight(d.properties);
+            })
+            .on("mouseout", function(event, d){
+                dehighlight(d.properties);
+            })
+            .on("mousemove", moveLabel)
+
             // Region selection event click listener
             .on("click", function(event, d){
                 var clickedRegion = d.properties.region;
@@ -385,7 +400,10 @@
                             // Return all provinces to their original region colors
                             var region = p.properties.region;
                             return regionColors[region] ? regionColors[region] : "#ccc";
-                        });
+                        })
+                        // Resets highlight stroke when region is deselected
+                        .style("stroke", "#fff")
+                        .style("stroke-width", "0.5px");
 
                     zoomMap(activeRegion, map);
 
@@ -394,6 +412,9 @@
 
                     // Hides the dropdown
                     d3.select(".dropdown").style("display", "none");
+
+                    // Hides dynamic label
+                    d3.select(".infolabel").remove();
                 } 
                 // IF: User clicks on a new region; color provinces
                 else {
@@ -432,6 +453,9 @@
                         d3.select(".dropdown").style("display", "block");
                 }
             });
+
+        var desc = provinces.append("desc")
+            .text('{"stroke": "#fff", "stroke-width": "0.5px"}');
     }
 
     // Function to handle map zooming
@@ -478,6 +502,108 @@
                 .duration(750)
                 .attr("transform", "translate(" + translateX + "," + translateY + ")scale(" + scale + ")");
         }
+    }
+
+    // Highlights enumeration units and bars
+    function highlight(props){
+        // Cancel the function if no region selected/hovered over
+        if (!activeRegion || props.region !== activeRegion) return;
+
+        // Map uses name value and chart uses province value
+        var regionName = props.name || props.Province;
+        
+        // Remove spaces to match classes
+        var className = regionName.replace(/ /g, "_");
+
+        // Stroke
+        var selected = d3.selectAll("." + className)
+            .style("stroke", "blue")
+            .style("stroke-width", "2")
+            .style("z-index", "50");
+
+        setLabel(props);
+    }
+
+    // Resets the highlight element style on mouseout
+    function dehighlight(props){
+        // Cancel the function if no region selected/hovered over
+        if (!activeRegion || props.region !== activeRegion) return;
+
+        var regionName = props.name || props.Province;
+        var className = regionName.replace(/ /g, "_");
+
+        var selected = d3.selectAll("." + className)
+            .style("stroke", function(){
+                return getStyle(this, "stroke");
+            })
+            .style("stroke-width", function(){
+                return getStyle(this, "stroke-width");
+            });
+
+        // Helper function to read the hidden <desc> element
+        function getStyle(element, styleName){
+            var styleText = d3.select(element)
+                .select("desc")
+                .text();
+
+            var styleObject = JSON.parse(styleText);
+            return styleObject[styleName];
+        }
+
+        d3.select(".infolabel").remove();
+    }
+
+    // Creates dynamic enumeration label
+    function setLabel(props){
+        var regionName = props.name || props.Province;
+
+        // Label content
+        var labelAttribute = "<h1>" + props[expressed] +
+            "</h1><b>" + expressed + "</b>";
+
+        // Info label div
+        var infolabel = d3.select("body")
+            .append("div")
+            .attr("class", "infolabel")
+            .attr("id", regionName.replace(/ /g, "_") + "_label")
+            .html(labelAttribute)
+            .style("z-index", "15")
+            .style("font-family", "sans-serif")
+            .style("font-weight", "bold")
+            .style("background-color", "rgb(255, 255, 255)")
+            .style("color", "#333")
+            .style("border", "1px solid #999")
+            .style("box-shadow", "2px 2px 5px rgba(0, 0, 0, 0.2)")
+
+        var regionNameDiv = infolabel.append("div")
+            .attr("class", "labelname")
+            .html(regionName);
+    }
+
+    // Moves dynamic enumeration label with mouse
+    function moveLabel(event){
+        // Ensures the label exists before trying to move it
+        var label = d3.select(".infolabel");
+        if (label.empty()) return;
+
+        // Get width of label
+        var labelWidth = label.node().getBoundingClientRect().width;
+
+        // Use coordinates of mousemove event to set label coordinates
+        // We use the modern 'event' parameter passed directly from D3
+        var x1 = event.clientX + 10,
+            y1 = event.clientY - 75,
+            x2 = event.clientX - labelWidth - 10,
+            y2 = event.clientY + 25;
+
+        // Horizontal label coordinate, testing for overflow
+        var x = event.clientX > window.innerWidth - labelWidth - 20 ? x2 : x1; 
+        
+        // Vertical label coordinate, testing for overflow
+        var y = event.clientY < 75 ? y2 : y1; 
+
+        label.style("left", x + "px")
+             .style("top", y + "px");
     }
 
     // function introAbstract(){
