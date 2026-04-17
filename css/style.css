@@ -9,14 +9,10 @@ html, body {
 
 /* This ensures that the map element fills the entire web page */
 .map {
-    width: 100%;
-    height: 100%;
+    /* width: 100%;
+    height: 100%; */
     display: block;
     box-sizing: border-box;
-
-    /* Partial fix to the graticule lines and fill not rendering in the top-right */
-    /* TODO: Figure this out */
-    background-color: #D5E3FF;
 }
 
 /* CHART STYLES */
@@ -106,3 +102,36 @@ html, body {
 }
 
 /* --------------- */
+
+.abstract {
+    text-align: center;
+    background-color: rgb(255, 255, 255);
+    border: 1px solid #999;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: bold;
+
+    width: 695px;
+    padding: 3px;
+    position: absolute;
+    left: 20px;
+    top: 20px;
+}
+
+.dropdown {
+    position: absolute;
+    top: 30px;
+    left: 40px;
+    z-index: 10;
+    font-family: sans-serif;
+    font-size: 1em;
+    font-weight: bold;
+    padding: 2px;
+    border: 1px solid #999;
+    box-shadow: 2px 2px 4px #999;
+}
+
+option {
+    font-weight: normal;
+}
