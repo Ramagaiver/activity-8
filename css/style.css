@@ -47,7 +47,7 @@ html, body {
 
     padding: 2px;
     border: 1px solid #999;
-    box-shadow: 2px 2px 4px #999;
+    box-shadow: 2px 2px 5px #999;
 
     width: 500px;
 }
@@ -154,7 +154,7 @@ option {
     color: #333;
 
     border: 1px solid #999;
-    box-shadow: 2px 2px 4px #999;
+    box-shadow: 2px 2px 5px #999;
     background-color: rgb(255, 255, 255);
     padding: 3px;
 }
@@ -169,20 +169,22 @@ option {
     font-weight: bold;
     color: #333;
 
-    width: 695px;
+    z-index: 10000;
+
+    width: 492px;
     padding: 3px;
-    position: absolute;
-    left: 20px;
-    bottom: 20px;
+    position: fixed;
+    left: 30px;
+    bottom: 137px;
 }
 
 /* Tutorial styles */
 .tutorial {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    bottom: 20px;
+    left: 30px;
+    width: 496px;
+    height: 113px;
 
     z-index: 1000;
 
@@ -196,17 +198,17 @@ option {
     font-weight: bold;
     color: #333;
 
-    background-color: rgba(0, 0, 0, 0.85); 
-    color: white;
     text-align: center;
-    padding: 40px;
-    font-size: 20px;
+    padding: 2px;
+    font-size: 10px;
+
+    /* display: block; */
 }
 
-/* Gif formatting */
-.tutorial img {
-    margin-bottom: 20px;
-    max-width: 1000px;
+/* Flag layout styles */
+.flag {
+    width: 100px;
+    height: 100px;
 }
 
 /* --------------- */

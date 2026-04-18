@@ -3,10 +3,16 @@
     var activeRegion = null;
 
     // Variables for data join
-    var attrArray = ["Formal Workforce", "Informal Workforce", "Total Workforce", "Informal Workforce % of Total Workforce"];
+    var attrArray = [
+        "Informal Workforce % of Total Workforce", 
+        "Formal Workforce % of Total Workforce",
+        "Informal Workers (per 1,000)",
+        "Formal Workers (per 1,000)",
+        "Ratio of Informal to Formal Workers"
+    ];
     
     // Starter variable for the percentage attribute
-    var expressed = attrArray[3];
+    var expressed = attrArray[0];
 
     // Chart dimensions
     var chartWidth = 700,
@@ -17,15 +23,15 @@
         .range([chartHeight, 0])
         .domain([0, 100])
 
-    // Default region color pallette
-    var regionColors = {
-        "Northern": "#3ce67b",
-        "Northeastern": "#f8a20c",
-        "Central": "#ffd0d0",
-        "Eastern": "#3ce67b", 
-        "Western": "#f8a20c",
-        "Southern": "#ffd0d0"
-    };
+    // // Default region color pallette
+    // var regionColors = {
+    //     "Northern": "#3ce67b",
+    //     "Northeastern": "#f8a20c",
+    //     "Central": "#ffd0d0",
+    //     "Eastern": "#3ce67b", 
+    //     "Western": "#f8a20c",
+    //     "Southern": "#ffd0d0"
+    // };
 
     // Begin script when window loads
     window.onload = setMap;
@@ -63,7 +69,7 @@
                 d3.json("data/Countries2.topojson"),                    
                 d3.json("data/Provinces2.topojson")                   
             ];  
-        Promise.all(promises).then(function(data) {
+        Promise.all(promises).then(function(data){
                 // Pass map and path to the callback   
                 callback(data, map, path);
             });
@@ -73,6 +79,27 @@
             var csvData = data[0],    
                 asia = data[1],    
                 thailand = data[2];
+
+            // Calculates normalized attributes
+            csvData.forEach(function(d){
+                // Parse raw data
+                var informalCount = parseFloat(d["Informal Workforce"].replace(/,/g, ""));
+                var formalCount = parseFloat(d["Formal Workforce"].replace(/,/g, ""));
+                var totalCount = parseFloat(d["Total Workforce"].replace(/,/g, ""));
+                var informalPct = parseFloat(d["Informal Workforce % of Total Workforce"]);
+
+                // Formal Percentage
+                d["Formal Workforce % of Total Workforce"] = parseFloat((100 - informalPct).toFixed(2));
+
+                // Informal Workers per 1,000
+                d["Informal Workers (per 1,000)"] = parseFloat(((informalCount / totalCount) * 1000).toFixed(2));
+
+                // Formal Workers per 1,000
+                d["Formal Workers (per 1,000)"] = parseFloat(((formalCount / totalCount) * 1000).toFixed(2));
+
+                // Ratio of Informal to Formal
+                d["Ratio of Informal to Formal Workers"] = parseFloat((informalCount / formalCount).toFixed(2));
+            });
 
             setGraticule(map, path)
 
@@ -89,23 +116,25 @@
             // Join csv data to GeoJSON enumeration units
             thaiProvinces = joinData(thaiProvinces, csvData)
 
-
             var colorScale = makeColorScale(csvData);
 
             // Add enumeration units to the map
             setEnumerationUnits(thaiProvinces, map, path, csvData);
 
-            // setChart(csvData, colorScale)
-            createDropdown(csvData, thaiProvinces, map);
+            // Loads an empty chart on initialization
+            setChart([], csvData, colorScale);
 
-            // Sets up the map interaction guide
-            introTutorial();
+            // Creates the dropdown menu
+            createDropdown(csvData, thaiProvinces, map);
         };
     }
 
-    function setChart(csvData, colorScale){
-        // Ensures all data is sorted from the beginning
-        csvData.sort(function(a, b){
+    function setChart(barData, fullData, colorScale){
+        // Removes old charts before rendering new ones
+        d3.select(".chart").remove();
+
+        // Sorts data that will be rendered
+        barData.sort(function(a, b){
             return a[expressed] - b[expressed];
         });
 
@@ -114,37 +143,35 @@
             .append("svg")
             .attr("width", chartWidth)
             .attr("height", chartHeight)
-            .attr("class", "chart")
-            .style("opacity", 0);
+            .attr("class", "chart");
 
-        // Chart fade transition
-        chart.transition()
-            .delay(300)
-            .duration(750)
-            .style("opacity", 1);
+        // Determine which stat to use for the axis maximum
+        var dataForMax = barData.length > 0 ? barData : fullData;
 
-        // Updates yScale domain based on the attribute
-        if (expressed === "Informal Workforce % of Total Workforce"){
+        // Updates yScale domain based on the appropriate stat
+        if (expressed.includes("%")){
             yScale.domain([0, 100]);
         } else {
-            // Finds the maximum value of the currently selected region
-            var max = d3.max(csvData, function(d){
+            // Calculates max for upper limit
+            var max = d3.max(dataForMax, function(d){
                 return parseFloat(String(d[expressed]).replace(/,/g, ""));
             });
-            yScale.domain([0, max * 1.1]); // 10% padding so highest bar doesn't touch the top of the chart
+            yScale.domain([0, max * 1.1]); 
         }
 
-        // Assigns bars for each province
+        // Assigns bars only for data passed in (regions/empty chart)
         var bars = chart.selectAll(".bars")
-            .data(csvData)
+            .data(barData)
             .enter()
             .append("rect")
             .attr("class", function(d){
                 var regionName = d.Province || d.name;
-                return "bars " + regionName.replace(/ /g, "_");            })
-            .attr("width", chartWidth / csvData.length - 1)
+                return "bars " + regionName.replace(/ /g, "_");            
+            })
+            // Prevents division by zero errors
+            .attr("width", barData.length ? (chartWidth / barData.length - 1) : 0)
             .attr("x", function(d, i){
-                return i * (chartWidth / csvData.length);
+                return barData.length ? i * (chartWidth / barData.length) : 0;
             })
             .attr("height", function(d){
                 return chartHeight - yScale(parseFloat(d[expressed]));
@@ -161,35 +188,46 @@
             .on("mouseout", function(event, d){
                 dehighlight(d);
             })
-            .on("mousemove", moveLabel);
+            .on("mousemove", moveLabel)
+            .style("opacity", 0);
 
         var desc = bars.append("desc")
             .text('{"stroke": "none", "stroke-width": "0px"}');
 
         // Calls updateChart 
-        updateChart(bars, csvData.length, colorScale);
+        updateChart(bars, barData.length, colorScale);
+
+        // Handles fading in newly created bars
+        bars.transition()
+            .duration(300)
+            .style("opacity", 1);
 
         // Vertical y-axis
         var yAxis = d3.axisRight()
             .scale(yScale);
 
-        // Places the y-axis on the right-sided edge of the chart
-        var axis = chart.append("g")
+        // Places the y-axis
+        chart.append("g")
             .attr("class", "axis")
             .attr("transform", "translate(" + chartWidth + ", 0)")
-            .call(yAxis);
+            .call(yAxis)
+            .style("opacity", 0) 
+            .transition()
+            .duration(300)
+            .style("pointer-events", "none")
+            .style("opacity", barData.length > 0 ? 1 : 0);
     }
 
     function createDropdown(csvData){
-        // Dropdown element
+        // Dropdown html element
         var dropdown = d3.select("body")
             .append("select")
             .attr("class", "dropdown")
-            .style("display", "none") // Hidden until region select
+            // .style("display", "none") // Hidden until region select
             .on("change", function(){
                 changeAttribute(this.value, csvData)
             })
-            .style("opacity", "0");
+            // .style("opacity", "0");
 
         // Attribute names/options, also default option
         var attrOptions = dropdown.selectAll("attrOptions")
@@ -203,7 +241,9 @@
 
     function updateChart(bars, n, colorScale){
         // Repositions, sizes and colors the bars
-        bars.attr("x", function(d, i){
+        bars.transition() // ADD THIS
+            .duration(300) // ADD THIS
+            .attr("x", function(d, i){
             return i * (chartWidth / n);
         })
         .attr("height", function(d){
@@ -214,7 +254,7 @@
         })
         .style("fill", function(d){
             var value = d[expressed];
-            if(value) {
+            if(value){
                 return colorScale(value);
             } else {
                 return "#ccc";
@@ -224,7 +264,7 @@
         // Updates the chart title dynamically
         d3.select(".chartTitle")
             .text(expressed + " by Province");
-}
+    }
 
     // Dropdown event handler
     function changeAttribute(attribute, csvData){
@@ -237,10 +277,10 @@
         // Recolors enumeration units
         var provinces = d3.selectAll(".provinces")
             .style("fill", function(d){ 
-                if (!activeRegion){
-                    var region = d.properties.region;
-                    return regionColors[region] ? regionColors[region] : "#ccc";
-                } 
+                // if (!activeRegion){
+                //     var region = d.properties.region;
+                //     return regionColors[region] ? regionColors[region] : "#ccc";
+                // } 
                 
                 if (activeRegion && d.properties.region !==activeRegion){
                     return "#ccc";
@@ -256,54 +296,81 @@
 
         // Sort, resize, and recolor bars if the chart exists
         var bars = d3.selectAll(".bars");
+        var dataForMax;
 
-        // Check if bars exist
+        // Check if bars exist to determine the data pool
         if (!bars.empty()){
-            // Returns the newly sorted chart
+            // Sort the existing bars
             bars = bars.sort(function(a, b){
                 return a[expressed] - b[expressed];
             });
+            // Use the regional bar data for the axis max
+            dataForMax = bars.data();
+        } else {
+            // Use the national data for the axis max
+            dataForMax = csvData;
+        }
 
-            // Updates yScale domain based on the attribute
-            var currentData = bars.data();
-            if (expressed === "Informal Workforce % of Total Workforce") {
-                yScale.domain([0, 100]);
-            } else {
-                var max = d3.max(currentData, function(d){
-                    return parseFloat(String(d[expressed]).replace(/,/g, ""));
-                });
-                yScale.domain([0, max * 1.1]);
-            }
+        // Update yScale domain based on the selected attribute
+        if (expressed.includes("%")){
+            yScale.domain([0, 100]);
+        } else {
+            var max = d3.max(dataForMax, function(d){
+                return parseFloat(String(d[expressed]).replace(/,/g, ""));
+            });
+            yScale.domain([0, max * 1.1]);
+        }
 
-            // Visually updates the yaxis to match the new scale
-            d3.select(".axis").transition().duration(300).call(d3.axisRight(yScale));
+        // Updates the y-axis to match the new scale
+        d3.select(".axis")
+            .transition()
+            .duration(300)
+            .call(d3.axisRight(yScale))
+            .style("opacity", bars.empty() ? 0 : 1);
 
-            // Passes the length of the chart's current data
+        // If bars exist, push the new scale/colors to them
+        if (!bars.empty()){
             var n = bars.data().length;
-            updateChart(bars, n, colorScale)
+            updateChart(bars, n, colorScale);
         }
     };
 
     function makeColorScale(data){
-        // Color palette
-        var colorClasses = [
-            "#fedbcb",
-            "#fcaf94",
-            "#fc8161",
-            "#f44f39",
-            "#d52221",
-            "#aa1016",
-            "#67000d"
-        ];
+        var colorClasses;
+
+        // Check if the current attribute is formal
+        if (expressed.startsWith("Formal")){
+            // Color palette for formal attributes
+            colorClasses = [
+                "#edf8e9",
+                "#c7e9c0",
+                "#a1d99b",
+                "#74c476",
+                "#41ab5d",
+                "#238b45",
+                "#005a32"
+            ];
+        } else {
+            // Color palette for informal attributes & ratios
+            colorClasses = [
+                "#fedbcb",
+                "#fcaf94",
+                "#fc8161",
+                "#f44f39",
+                "#d52221",
+                "#aa1016",
+                "#67000d"
+            ];
+        }
 
         // Creates the color scale generator
         var colorScale = d3.scaleQuantile()
-            .range(colorClasses)
+            .range(colorClasses);
 
         // Builds an array for all the values of the expressed attribute
         var domainArray = [];
         for (var i=0; i<data.length; i++){
-            var val = parseFloat((data[i][expressed]).replace(/,/g, ""));
+            var val = parseFloat(String(data[i][expressed]).replace(/,/g, ""));
             domainArray.push(val);
         };
 
@@ -318,7 +385,7 @@
             .extent([[80, -5], [150, 500]])
             .step([5, 5]);
 
-        //create graticule background
+        // Creates graticule background
         var gratBackground = map.append("path")
             .datum(graticule.outline()) // Binds the graticule background
             .attr("class", "gratBackground") // Class for styling
@@ -363,6 +430,7 @@
     }
 
     function setEnumerationUnits(thaiProvinces, map, path, csvData){
+        var colorScale = makeColorScale(csvData);
 
         // Render Thai provinces and apply default region colors
         var provinces = map.selectAll(".provinces")
@@ -375,8 +443,12 @@
             .attr("d", path)
             // Set initial color based on the region palette
             .style("fill", function(d){
-                var region = d.properties.region;
-                return regionColors[region] ? regionColors[region] : "#ccc"; // Fallback to gray if region is missing
+                var value = d.properties[expressed];
+                    if (value !== undefined){
+                        return colorScale(value);
+                    } else {
+                        return "#ccc";
+                    }
             })
             .style("stroke", "#fff")
             .style("stroke-width", "0.5px")
@@ -395,16 +467,21 @@
                 var clickedRegion = d.properties.region;
 
                 // IF: User clicks on already active region; resets province color
-                if (activeRegion === clickedRegion) {
+                if (activeRegion === clickedRegion){
                     activeRegion = null; // Clear active state
+
+                    var colorScale = makeColorScale(csvData);
 
                     map.selectAll(".provinces")
                         .transition()
                         .duration(300)
                         .style("fill", function(p){
-                            // Return all provinces to their original region colors
-                            var region = p.properties.region;
-                            return regionColors[region] ? regionColors[region] : "#ccc";
+                            var value = p.properties[expressed];
+                                if (value !== undefined){
+                                    return colorScale(value);
+                                } else {
+                                    return "#ccc";
+                                }
                         })
                         // Resets highlight stroke when region is deselected
                         .style("stroke", "#fff")
@@ -412,30 +489,63 @@
 
                     zoomMap(activeRegion, map);
 
-                    // Fade in abstract
+                    // Disappears the abstract
                     d3.select(".abstract")
+                        // .style("display", "block")
                         .transition()
-                        .duration(1000)
+                        .duration(300)
                         .style("opacity", 1);
 
-                    // Fade in & delete chart
-                    d3.select(".chart")
+                    d3.select(".tutorial")
+                        // .style("display", "block")
                         .transition()
                         .duration(300)
-                        .style("opacity", 0)
-                        .remove();
+                        .style("opacity", 1);
+
+                    // // Fade in & delete chart
+                    // d3.select(".chart")
+                    //     .transition()
+                    //     .duration(300)
+                    //     .style("opacity", 0)
+                    //     .remove();
 
                     // Fade in & delete dropdown
-                    d3.select(".dropdown")
-                        .transition()
-                        .duration(300)
-                        .style("opacity", 0)
-                        .on("end", function() {
-                            d3.select(this).style("display", "none");
-                        });
+                    // d3.select(".dropdown")
+                    //     .transition()
+                    //     .duration(300)
+                    //     .style("opacity", 0)
+                    //     .on("end", function(){
+                    //         d3.select(this).style("display", "none");
+                    //     });
 
-                    // Hides dynamic label
-                    d3.select(".infolabel").remove();
+                    // // Hides dynamic label
+                    // d3.select(".abstract")
+                    //     .transition()
+                    //     .duration(1000)
+                    //     .style("opacity", 1);
+
+                    d3.select(".infolabel")
+                        .remove();
+
+                    // setChart([], csvData, colorScale);
+
+                    // y-axis ticks and bars FADE OUT
+                    d3.select(".axis").transition().duration(300).style("opacity", 0);
+
+                    var oldBars = d3.selectAll(".bars");
+                    if (!oldBars.empty()){
+                        oldBars.transition()
+                            .duration(300)
+                            .style("opacity", 0)
+                            .on("end", function(d, i, nodes){
+                                // Fires setChart once the last bar finishes fading
+                                if (i === nodes.length - 1){
+                                    setChart([], csvData, colorScale);
+                                }
+                            });
+                    } else {
+                        setChart([], csvData, colorScale);
+                    }
                 } 
                 // IF: User clicks on a new region; color provinces
                 else {
@@ -448,10 +558,10 @@
                         .transition()
                         .duration(300)
                         .style("fill", function(p){
-                            if (p.properties.region === activeRegion) {
+                            if (p.properties.region === activeRegion){
                                 // Loads in the color scheme for the expressed attribute
                                 var colorPalette = p.properties[expressed];
-                                if (colorPalette) {
+                                if (colorPalette){
                                     return colorScale(colorPalette)
                                 } else {
                                     return "#ccc"
@@ -466,33 +576,63 @@
 
                     // Filters data to only display the selected region
                     var regionData = thaiProvinces
-                        .map(function(province) {return province.properties;})
-                        .filter(function(props) {return props.region === activeRegion;})
+                        .map(function(province){return province.properties;})
+                        .filter(function(props){return props.region === activeRegion;})
 
-                        // Fade out abstract
+                        // Reappears the abstract
                         d3.select(".abstract")
                             .transition()
-                            .duration(750)
+                            .duration(300)
                             .style("opacity", 0)
+                            .style("pointer-events", "none")
 
-                        // Chart fade out transition
-                        d3.select(".chart")
+                        d3.select(".tutorial")
                             .transition()
                             .duration(300)
                             .style("opacity", 0)
-                            .remove();
+                            .style("pointer-events", "none")
 
-                        setChart(regionData, colorScale);
+                        // y-axis ticks and bars FADE IN
+                        d3.select(".axis").transition().duration(300).style("opacity", 0);
+
+                        // d3.select(".abstract")
+                        //     .transition()
+                        //     .duration(750)
+                        //     .style("opacity", 0);
+
+                        // // Chart fade out transition
+                        // d3.select(".chart")
+                        //     .transition()
+                        //     .duration(300)
+                        //     .style("opacity", 0)
+                        //     .remove();
+
+                        // setChart(regionData, csvData, colorScale);
+
+                        var oldBars = d3.selectAll(".bars");
+                            if (!oldBars.empty()){
+                                oldBars.transition()
+                                    .duration(300)
+                                    .style("opacity", 0)
+                                    .on("end", function(d, i, nodes){
+                                        // Fires setChart once the last bar finishes fading
+                                        if (i === nodes.length - 1){
+                                            setChart(regionData, csvData, colorScale);
+                                        }
+                                    });
+                            } else {
+                                setChart(regionData, csvData, colorScale);
+                            }
                         
                         // Dropdown fade out transition
-                        d3.select(".dropdown")
-                            .style("display", "block")
-                            .transition()
-                            .duration(300)
-                            .style("opacity", 0)
-                            .transition()
-                            .duration(750)
-                            .style("opacity", 1);
+                        // d3.select(".dropdown")
+                        //     .style("display", "block")
+                        //     .transition()
+                        //     .duration(300)
+                        //     .style("opacity", 0)
+                        //     .transition()
+                        //     .duration(750)
+                        //     .style("opacity", 1);
                 }
             });
 
@@ -501,7 +641,7 @@
     }
 
     // Function to handle map zooming
-    function zoomMap(activeRegion, map) {
+    function zoomMap(activeRegion, map){
         
         // Redefine the current window width and height for every click
         var width = window.innerWidth;
@@ -518,7 +658,7 @@
         };
         
         // Zoom out
-        if (activeRegion === null) {
+        if (activeRegion === null){
             map.transition()
                 .delay(300)
                 .duration(750)
@@ -561,7 +701,7 @@
         var selected = d3.selectAll("." + className)
             .style("stroke", "blue")
             .style("stroke-width", "2")
-            .style("z-index", "50");
+            .raise();
 
         setLabel(props);
     }
@@ -576,28 +716,22 @@
 
         var selected = d3.selectAll("." + className)
             .style("stroke", function(){
-                return getStyle(this, "stroke");
+                // If it's a map province, return white. If it's a chart bar, return none.
+                return d3.select(this).classed("provinces") ? "#fff" : "none";
             })
             .style("stroke-width", function(){
-                return getStyle(this, "stroke-width");
+                return d3.select(this).classed("provinces") ? "0.5px" : "0px";
             });
 
-        // Helper function to read the hidden <desc> element
-        function getStyle(element, styleName){
-            var styleText = d3.select(element)
-                .select("desc")
-                .text();
-
-            var styleObject = JSON.parse(styleText);
-            return styleObject[styleName];
-        }
-
-        d3.select(".infolabel").remove();
+        d3.selectAll(".infolabel").remove();
     }
 
     // Creates dynamic enumeration label
     function setLabel(props){
         var regionName = props.name || props.Province;
+
+        // Destroy pre-existing labels
+        d3.selectAll(".infolabel").remove();
 
         // Label content
         var labelAttribute = "<h1>" + props[expressed] +
@@ -631,29 +765,19 @@
         // Get width of label
         var labelWidth = label.node().getBoundingClientRect().width;
 
-        // Use coordinates of mousemove event to set label coordinates
+        // Coordinates of mousemove event to set label coordinates
         var x1 = event.clientX + 10,
             y1 = event.clientY - 75,
             x2 = event.clientX - labelWidth - 10,
             y2 = event.clientY + 25;
 
-        // Horizontal label coordinate, testing for overflow
+        // Horizontal label coordinate
         var x = event.clientX > window.innerWidth - labelWidth - 20 ? x2 : x1; 
         
-        // Vertical label coordinate, testing for overflow
+        // Vertical label coordinate
         var y = event.clientY < 75 ? y2 : y1; 
 
         label.style("left", x + "px")
              .style("top", y + "px");
-    }
-
-    function introTutorial(){
-        d3.select(".tutorial").on("click", function() {
-            d3.select(this)
-                .transition()
-                .duration(500)
-                .style("opacity", 0)
-                .remove();
-        });
     }
 })();
